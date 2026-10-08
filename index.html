@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body { margin: 0; } [hidden] { display: none !important; }</style>
+<title>Intervalos 10/20</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: one-screen scoreboard; dial centered, cycle strip and controls stacked below. Single dark look by choice. */
+  :root {
+    color-scheme: dark;
+    --bg: #0e1214;
+    --surface: #161b1e;
+    --line: #283034;
+    --fg: #eef3f1;
+    --muted: #8b9893;
+    --prep: #f4b73a;
+    --work: #ff5b3a;
+    --rest: #3cc4a6;
+    --ink-on-phase: #0e1214;
+    --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; }
+
+  .app { --phase: var(--prep); min-height: 100%; box-sizing: border-box;
+    background: radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--phase) 20%, transparent), transparent 62%), var(--bg);
+    transition: background-color .4s; }
+  .app[data-phase="work"] { --phase: var(--work); }
+  .app[data-phase="rest"] { --phase: var(--rest); }
+  .app[data-phase="done"] { --phase: var(--rest); }
+
+  .wrap { max-width: 520px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 28px;
+    display: flex; flex-direction: column; gap: 22px; }
+
+  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .brand h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 28px; letter-spacing: .02em; text-transform: uppercase; line-height: 1; }
+  .brand p { margin: 0; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .total { text-align: right; display: flex; flex-direction: column; gap: 2px; }
+  .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); font-weight: 600; }
+  .total strong { font-family: var(--display); font-weight: 700; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+  .dial { position: relative; width: min(100%, 52vh, 380px); aspect-ratio: 1; max-width: 100%; margin: 0 auto; container-type: inline-size; }
+  .dial svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+  .track { fill: none; stroke: var(--line); stroke-width: 7; }
+  .prog { fill: none; stroke: var(--phase); stroke-width: 7; stroke-linecap: round; transition: stroke .3s; }
+  .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqi; text-align: center; }
+  .phase-label { color: var(--phase); font-weight: 700; text-transform: uppercase; letter-spacing: .16em; font-size: clamp(14px, 6.4cqi, 26px); }
+  .digits { font-family: var(--display); font-weight: 800; font-size: 44cqi; line-height: .82; font-variant-numeric: tabular-nums; }
+  .app[data-status="paused"] .digits { opacity: .45; }
+  .cycle { color: var(--muted); font-size: clamp(13px, 4.6cqi, 18px); font-variant-numeric: tabular-nums; }
+
+  .strip-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .strip-head { display: flex; justify-content: space-between; }
+  .strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--n, 20), minmax(0, 1fr)); gap: 4px; }
+  .strip li { height: 10px; border-radius: 2px; background: var(--line); transition: background .3s; }
+  .strip li.done { background: color-mix(in srgb, var(--fg) 55%, transparent); }
+  .strip li.now { background: var(--phase); }
+
+  .controls { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  button { font: inherit; cursor: pointer; border-radius: 10px; }
+  button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; }
+  .primary { min-width: 190px; height: 58px; padding-inline: 24px; border: 0; background: var(--phase); color: var(--ink-on-phase);
+    font-family: var(--display); font-weight: 800; font-size: 24px; letter-spacing: .06em; text-transform: uppercase; transition: background .3s, transform .08s; }
+  .primary:active { transform: scale(.98); }
+  .ghost { height: 58px; padding-inline: 20px; background: transparent; color: var(--fg); border: 1px solid var(--line); font-weight: 600; }
+  .ghost:hover { border-color: var(--muted); }
+
+  .hint { margin: 0; text-align: center; color: var(--muted); font-size: 12px; }
+  kbd { font-family: var(--body); font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  details { border-top: 1px solid var(--line); padding-top: 14px; }
+  summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; width: fit-content; }
+  fieldset { border: 0; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  fieldset:disabled { opacity: .45; }
+  fieldset label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--muted); }
+  fieldset input { width: 100%; box-sizing: border-box; height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--fg); font: 600 18px var(--body); font-variant-numeric: tabular-nums; }
+  .note { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+
+  @media (max-width: 420px) {
+    fieldset { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .primary { min-width: 0; flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="app" id="app" data-phase="prep" data-status="idle">
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <h1>Intervalos</h1>
+        <p id="summary">5 s preparación · 10 s trabajo · 20 s descanso · 20 ciclos</p>
+      </div>
+      <div class="total">
+        <span class="lbl">Tiempo restante</span>
+        <strong id="totalLeft">11:20</strong>
+      </div>
+    </header>
+
+    <section class="dial" aria-live="polite">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="track" cx="100" cy="100" r="92"></circle>
+        <circle class="prog" id="prog" cx="100" cy="100" r="92"></circle>
+      </svg>
+      <div class="center">
+        <div class="phase-label" id="phaseLabel">Prepárate</div>
+        <div class="digits" id="digits">5</div>
+        <div class="cycle" id="cycleLabel">Ciclo 1 de 20</div>
+      </div>
+    </section>
+
+    <div class="strip-wrap">
+      <div class="strip-head">
+        <span class="lbl">Ciclos</span>
+        <span class="lbl" id="stripCount">0 / 20</span>
+      </div>
+      <ol class="strip" id="strip"></ol>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="toggle" type="button">Comenzar</button>
+      <button class="ghost" id="reset" type="button">Reiniciar</button>
+    </div>
+    <p class="hint"><kbd>Espacio</kbd> iniciar o pausar · <kbd>R</kbd> reiniciar</p>
+
+    <details>
+      <summary>Ajustes</summary>
+      <fieldset id="settings">
+        <label for="setPrep">Cuenta regresiva (s)<input id="setPrep" type="number" inputmode="numeric" min="0" max="30" value="5"></label>
+        <label for="setWork">Trabajo (s)<input id="setWork" type="number" inputmode="numeric" min="1" max="600" value="10"></label>
+        <label for="setRest">Descanso (s)<input id="setRest" type="number" inputmode="numeric" min="0" max="600" value="20"></label>
+        <label for="setCycles">Ciclos<input id="setCycles" type="number" inputmode="numeric" min="1" max="60" value="20"></label>
+      </fieldset>
+      <p class="note">Los cambios reinician el temporizador. Solo se pueden editar cuando está detenido.</p>
+    </details>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const app = $("app"), prog = $("prog"), digits = $("digits"), phaseLabel = $("phaseLabel"),
+        cycleLabel = $("cycleLabel"), totalLeft = $("totalLeft"), strip = $("strip"),
+        stripCount = $("stripCount"), toggleBtn = $("toggle"), settings = $("settings");
+
+  const CIRC = 2 * Math.PI * 92;
+  prog.style.strokeDasharray = CIRC;
+
+  const DEFAULTS = { prep: 5, work: 10, rest: 20, cycles: 20 };
+  const LIMITS = { prep: [0, 30], work: [1, 600], rest: [0, 600], cycles: [1, 60] };
+  const INPUTS = { prep: $("setPrep"), work: $("setWork"), rest: $("setRest"), cycles: $("setCycles") };
+  const LABELS = { prep: "Prepárate", work: "Entrena", rest: "Descansa", done: "Terminado" };
+
+  let cfg = { ...DEFAULTS };
+  try {
+    const saved = JSON.parse(localStorage.getItem("intervalos.cfg") || "null");
+    if (saved) for (const k of Object.keys(DEFAULTS)) if (Number.isFinite(saved[k])) cfg[k] = clamp(k, saved[k]);
+  } catch (e) {}
+
+  let phases = [], totalMs = 0, idx = 0, phaseElapsed = 0, status = "idle";
+  let timer = null, lastNow = 0, enteredIdx = -1, lastSec = null, wakeLock = null;
+
+  function clamp(k, v) {
+    const [lo, hi] = LIMITS[k];
+    return Math.min(hi, Math.max(lo, Math.round(v)));
+  }
+
+  function build() {
+    phases = [];
+    for (let c = 1; c <= cfg.cycles; c++) {
+      if (cfg.prep > 0) phases.push({ type: "prep", dur: cfg.prep * 1000, cycle: c });
+      phases.push({ type: "work", dur: cfg.work * 1000, cycle: c });
+      if (c < cfg.cycles && cfg.rest > 0) phases.push({ type: "rest", dur: cfg.rest * 1000, cycle: c });
+    }
+    totalMs = phases.reduce((s, p) => s + p.dur, 0);
+    strip.style.setProperty("--n", cfg.cycles);
+    strip.innerHTML = "";
+    for (let c = 1; c <= cfg.cycles; c++) {
+      const li = document.createElement("li");
+      li.title = "Ciclo " + c;
+      strip.appendChild(li);
+    }
+    $("summary").textContent = `${cfg.prep} s preparación · ${cfg.work} s trabajo · ${cfg.rest} s descanso · ${cfg.cycles} ciclos`;
+    for (const k of Object.keys(INPUTS)) INPUTS[k].value = cfg[k];
+  }
+
+  let ctx = null;
+  function ensureAudio() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) ctx = new AC();
+    }
+    if (ctx && ctx.state === "suspended") ctx.resume();
+  }
+  function note(freq, dur, when = 0, vol = 0.35) {
+    if (!ctx) return;
+    const t = ctx.currentTime + when;
+    const g = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 3000;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(filter).connect(ctx.destination);
+    [[1, 1], [4, 0.2], [10, 0.04]].forEach(([mult, amp]) => {
+      const o = ctx.createOscillator(), og = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = freq * mult;
+      og.gain.value = amp;
+      o.connect(og).connect(g);
+      o.start(t);
+      o.stop(t + dur + 0.05);
+    });
+  }
+  const seq = (notes, step, fn) => notes.forEach((f, i) => fn(f, i * step, i === notes.length - 1));
+
+  const sounds = {
+    pip: () => { ensureAudio(); note(659, 0.35, 0, 0.4); },
+    work: () => { ensureAudio(); seq([523, 659, 784], 0.07, (f, w) => note(f, 0.8, w, 0.35)); },
+    rest: () => { ensureAudio(); note(659, 0.5, 0, 0.38); note(440, 0.8, 0.18, 0.38); },
+    done: () => { ensureAudio(); seq([523, 659, 784, 1046, 1318], 0.1, (f, w, last) => note(f, last ? 1.2 : 0.5, w, 0.35)); }
+  };
+
+  async function lockScreen() {
+    try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch (e) { wakeLock = null; }
+  }
+  function unlockScreen() {
+    try { if (wakeLock) wakeLock.release(); } catch (e) {}
+    wakeLock = null;
+  }
+
+  function fmt(ms) {
+    const s = Math.max(0, Math.ceil(ms / 1000));
+    return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+  }
+
+  function elapsedBefore(i) {
+    let s = 0;
+    for (let j = 0; j < i; j++) s += phases[j].dur;
+    return s;
+  }
+
+  function render() {
+    app.dataset.status = status;
+    settings.disabled = status === "running" || status === "paused";
+
+    if (status === "done") {
+      app.dataset.phase = "done";
+      phaseLabel.textContent = LABELS.done;
+      digits.textContent = cfg.cycles;
+      cycleLabel.textContent = cfg.cycles === 1 ? "1 ciclo completado" : `${cfg.cycles} ciclos completados`;
+      prog.style.strokeDashoffset = 0;
+      totalLeft.textContent = "0:00";
+      [...strip.children].forEach(li => { li.className = "done"; });
+      stripCount.textContent = `${cfg.cycles} / ${cfg.cycles}`;
+      toggleBtn.textContent = "Repetir";
+      return;
+    }
+
+    const p = phases[idx];
+    const remain = p.dur - phaseElapsed;
+    const secs = Math.max(1, Math.ceil(remain / 1000));
+
+    if (status === "running") {
+      if (idx !== enteredIdx) {
+        enteredIdx = idx;
+        lastSec = null;
+        if (p.type === "work") sounds.work();
+        if (p.type === "rest") sounds.rest();
+      }
+      if (p.type === "prep" && secs !== lastSec) sounds.pip();
+      lastSec = secs;
+    }
+
+    app.dataset.phase = p.type;
+    phaseLabel.textContent = status === "paused" ? "En pausa" : LABELS[p.type];
+    digits.textContent = secs;
+    cycleLabel.textContent = `Ciclo ${p.cycle} de ${cfg.cycles}`;
+    prog.style.strokeDashoffset = CIRC * Math.min(1, phaseElapsed / p.dur);
+    totalLeft.textContent = fmt(totalMs - elapsedBefore(idx) - phaseElapsed);
+
+    const completed = p.type === "rest" ? p.cycle : p.cycle - 1;
+    [...strip.children].forEach((li, i) => {
+      const c = i + 1;
+      li.className = c <= completed ? "done" : c === p.cycle ? "now" : "";
+    });
+    stripCount.textContent = `${completed} / ${cfg.cycles}`;
+    toggleBtn.textContent = status === "running" ? "Pausar" : status === "paused" ? "Continuar" : "Comenzar";
+  }
+
+  function tick() {
+    const now = performance.now();
+    phaseElapsed += now - lastNow;
+    lastNow = now;
+    while (phaseElapsed >= phases[idx].dur) {
+      phaseElapsed -= phases[idx].dur;
+      idx++;
+      if (idx >= phases.length) return finish();
+    }
+    render();
+  }
+
+  function start() {
+    ensureAudio();
+    if (status === "done") reset();
+    status = "running";
+    lastNow = performance.now();
+    clearInterval(timer);
+    timer = setInterval(tick, 50);
+    lockScreen();
+    render();
+  }
+
+  function pause() {
+    tick();
+    if (status !== "running") return;
+    status = "paused";
+    clearInterval(timer);
+    unlockScreen();
+    render();
+  }
+
+  function finish() {
+    clearInterval(timer);
+    status = "done";
+    idx = phases.length - 1;
+    phaseElapsed = phases[idx].dur;
+    sounds.done();
+    unlockScreen();
+    render();
+  }
+
+  function reset() {
+    clearInterval(timer);
+    status = "idle";
+    idx = 0;
+    phaseElapsed = 0;
+    enteredIdx = -1;
+    lastSec = null;
+    unlockScreen();
+    build();
+    render();
+  }
+
+  function toggle() {
+    if (status === "running") pause();
+    else start();
+  }
+
+  toggleBtn.addEventListener("click", toggle);
+  $("reset").addEventListener("click", reset);
+
+  for (const k of Object.keys(INPUTS)) {
+    INPUTS[k].addEventListener("change", () => {
+      const v = Number(INPUTS[k].value);
+      cfg[k] = Number.isFinite(v) ? clamp(k, v) : DEFAULTS[k];
+      try { localStorage.setItem("intervalos.cfg", JSON.stringify(cfg)); } catch (e) {}
+      reset();
+    });
+  }
+
+  document.addEventListener("keydown", e => {
+    if (e.target.closest && e.target.closest("input, button, summary")) {
+      if (e.target.tagName === "INPUT") return;
+      if (e.code === "Space") return;
+    }
+    if (e.code === "Space") { e.preventDefault(); toggle(); }
+    else if (e.key === "r" || e.key === "R") reset();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && status === "running") lockScreen();
+  });
+
+  reset();
+})();
+</script>
+</body>
+</html>
