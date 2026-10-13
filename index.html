@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>body { margin: 0; } [hidden] { display: none !important; }</style>
-<title>Intervalos 10/20</title>
+<title>Intervalos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
-  /* Layout: one-screen scoreboard; dial centered, cycle strip and controls stacked below. Single dark look by choice. */
+  /* Layout: one-screen scoreboard; routine tabs on top, current exercise above the dial, routine list below controls. Single dark look by choice. */
   :root {
     color-scheme: dark;
     --bg: #0e1214;
@@ -28,14 +28,14 @@
   body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; }
 
   .app { --phase: var(--prep); min-height: 100%; box-sizing: border-box;
-    background: radial-gradient(circle at 50% 36%, color-mix(in srgb, var(--phase) 20%, transparent), transparent 62%), var(--bg);
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--phase) 20%, transparent), transparent 62%), var(--bg);
     transition: background-color .4s; }
   .app[data-phase="work"] { --phase: var(--work); }
   .app[data-phase="rest"] { --phase: var(--rest); }
   .app[data-phase="done"] { --phase: var(--rest); }
 
   .wrap { max-width: 520px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 28px;
-    display: flex; flex-direction: column; gap: 22px; }
+    display: flex; flex-direction: column; gap: 20px; }
 
   .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
@@ -45,7 +45,18 @@
   .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); font-weight: 600; }
   .total strong { font-family: var(--display); font-weight: 700; font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
 
-  .dial { position: relative; width: min(100%, 52vh, 380px); aspect-ratio: 1; max-width: 100%; margin: 0 auto; container-type: inline-size; }
+  .tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  .tab { height: 40px; border: 0; background: transparent; color: var(--muted); font-weight: 600; font-size: 14px; border-radius: 8px; }
+  .tab:hover { color: var(--fg); }
+  .tab[aria-selected="true"] { background: var(--line); color: var(--fg); }
+
+  .current { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+  .now-name { font-family: var(--display); font-weight: 800; font-size: clamp(26px, 8vw, 38px); line-height: 1; text-transform: uppercase; letter-spacing: .02em; transition: color .3s; }
+  .app[data-phase="work"][data-status="running"] .now-name { color: var(--phase); }
+  .now-note { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.35; max-width: 40ch; min-height: 2.7em; }
+
+  .dial { position: relative; width: min(100%, 44vh, 340px); aspect-ratio: 1; max-width: 100%; margin: 0 auto; container-type: inline-size; }
   .dial svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
   .track { fill: none; stroke: var(--line); stroke-width: 7; }
   .prog { fill: none; stroke: var(--phase); stroke-width: 7; stroke-linecap: round; transition: stroke .3s; }
@@ -56,7 +67,7 @@
   .cycle { color: var(--muted); font-size: clamp(13px, 4.6cqi, 18px); font-variant-numeric: tabular-nums; }
 
   .strip-wrap { display: flex; flex-direction: column; gap: 8px; }
-  .strip-head { display: flex; justify-content: space-between; }
+  .row-head { display: flex; justify-content: space-between; gap: 12px; }
   .strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--n, 20), minmax(0, 1fr)); gap: 4px; }
   .strip li { height: 10px; border-radius: 2px; background: var(--line); transition: background .3s; }
   .strip li.done { background: color-mix(in srgb, var(--fg) 55%, transparent); }
@@ -73,6 +84,18 @@
 
   .hint { margin: 0; text-align: center; color: var(--muted); font-size: 12px; }
   kbd { font-family: var(--body); font-size: 11px; border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+
+  .plan-wrap { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .plan { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; counter-reset: step; }
+  .plan li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; align-items: baseline;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); transition: border-color .3s; }
+  .plan li::before { counter-increment: step; content: counter(step); grid-row: span 2; font-family: var(--display); font-weight: 800; font-size: 22px; line-height: 1; color: var(--muted); }
+  .plan .p-name { font-weight: 600; }
+  .plan .p-count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .plan .p-note { grid-column: 2 / -1; color: var(--muted); font-size: 13px; line-height: 1.35; }
+  .plan li.now { border-color: var(--phase); }
+  .plan li.now::before, .plan li.now .p-count { color: var(--phase); }
+  .outro { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
 
   details { border-top: 1px solid var(--line); padding-top: 14px; }
   summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .12em; width: fit-content; }
@@ -97,14 +120,22 @@
   <div class="wrap">
     <header class="top">
       <div class="brand">
-        <h1>Intervalos</h1>
-        <p id="summary">5 s preparación · 10 s trabajo · 20 s descanso · 20 ciclos</p>
+        <h1 id="title">Intervalos</h1>
+        <p id="summary"></p>
       </div>
       <div class="total">
         <span class="lbl">Tiempo restante</span>
-        <strong id="totalLeft">11:20</strong>
+        <strong id="totalLeft">0:00</strong>
       </div>
     </header>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Rutinas"></nav>
+
+    <section class="current">
+      <span class="lbl" id="nowTag"></span>
+      <div class="now-name" id="nowName"></div>
+      <p class="now-note" id="nowNote"></p>
+    </section>
 
     <section class="dial" aria-live="polite">
       <svg viewBox="0 0 200 200" aria-hidden="true">
@@ -112,16 +143,16 @@
         <circle class="prog" id="prog" cx="100" cy="100" r="92"></circle>
       </svg>
       <div class="center">
-        <div class="phase-label" id="phaseLabel">Prepárate</div>
-        <div class="digits" id="digits">5</div>
-        <div class="cycle" id="cycleLabel">Ciclo 1 de 20</div>
+        <div class="phase-label" id="phaseLabel"></div>
+        <div class="digits" id="digits"></div>
+        <div class="cycle" id="cycleLabel"></div>
       </div>
     </section>
 
     <div class="strip-wrap">
-      <div class="strip-head">
+      <div class="row-head">
         <span class="lbl">Ciclos</span>
-        <span class="lbl" id="stripCount">0 / 20</span>
+        <span class="lbl" id="stripCount"></span>
       </div>
       <ol class="strip" id="strip"></ol>
     </div>
@@ -132,15 +163,24 @@
     </div>
     <p class="hint"><kbd>Espacio</kbd> iniciar o pausar · <kbd>R</kbd> reiniciar</p>
 
+    <section class="plan-wrap">
+      <div class="row-head">
+        <span class="lbl">Rutina</span>
+        <span class="lbl" id="roundLabel"></span>
+      </div>
+      <ol class="plan" id="plan"></ol>
+      <p class="outro" id="outro"></p>
+    </section>
+
     <details>
       <summary>Ajustes</summary>
       <fieldset id="settings">
-        <label for="setPrep">Cuenta regresiva (s)<input id="setPrep" type="number" inputmode="numeric" min="0" max="30" value="5"></label>
-        <label for="setWork">Trabajo (s)<input id="setWork" type="number" inputmode="numeric" min="1" max="600" value="10"></label>
-        <label for="setRest">Descanso (s)<input id="setRest" type="number" inputmode="numeric" min="0" max="600" value="20"></label>
-        <label for="setCycles">Ciclos<input id="setCycles" type="number" inputmode="numeric" min="1" max="60" value="20"></label>
+        <label for="setPrep">Cuenta regresiva (s)<input id="setPrep" type="number" inputmode="numeric" min="0" max="30"></label>
+        <label for="setWork">Trabajo (s)<input id="setWork" type="number" inputmode="numeric" min="1" max="600"></label>
+        <label for="setRest">Descanso (s)<input id="setRest" type="number" inputmode="numeric" min="0" max="600"></label>
+        <label for="setCycles">Ciclos<input id="setCycles" type="number" inputmode="numeric" min="1" max="60"></label>
       </fieldset>
-      <p class="note">Los cambios reinician el temporizador. Solo se pueden editar cuando está detenido.</p>
+      <p class="note" id="settingsNote"></p>
     </details>
   </div>
 </main>
@@ -150,21 +190,74 @@
   const $ = id => document.getElementById(id);
   const app = $("app"), prog = $("prog"), digits = $("digits"), phaseLabel = $("phaseLabel"),
         cycleLabel = $("cycleLabel"), totalLeft = $("totalLeft"), strip = $("strip"),
-        stripCount = $("stripCount"), toggleBtn = $("toggle"), settings = $("settings");
+        stripCount = $("stripCount"), toggleBtn = $("toggle"), settings = $("settings"),
+        tabs = $("tabs"), plan = $("plan"), nowTag = $("nowTag"), nowName = $("nowName"),
+        nowNote = $("nowNote"), roundLabel = $("roundLabel");
 
   const CIRC = 2 * Math.PI * 92;
   prog.style.strokeDasharray = CIRC;
 
-  const DEFAULTS = { prep: 5, work: 10, rest: 20, cycles: 20 };
+  // prepEach: countdown before every cycle (hangboard: time to grab the edge). Otherwise a single countdown at the start
+  // and pips in the last 3 s of each rest.
+  const PROGRAMS = {
+    dedos: {
+      tab: "Dedos", title: "No hangs", workLabel: "Cuelga", prepEach: true,
+      defaults: { prep: 5, work: 10, rest: 20, cycles: 20 },
+      items: [
+        { name: "Brazo izquierdo", note: "No hang a un brazo", reps: 6 },
+        { name: "Brazo derecho", note: "No hang a un brazo", reps: 6 },
+        { name: "3 dedos · izquierda", note: "No hang a un brazo con 3 dedos", reps: 2 },
+        { name: "3 dedos · derecha", note: "No hang a un brazo con 3 dedos", reps: 2 },
+        { name: "2 dedos · izquierda", note: "No hang a un brazo con 2 dedos", reps: 2 },
+        { name: "2 dedos · derecha", note: "No hang a un brazo con 2 dedos", reps: 2 }
+      ],
+      outro: ""
+    },
+    rodillas: {
+      tab: "Rodillas", title: "Rodillas sanas", workLabel: "Entrena", prepEach: false, rounds: 2,
+      defaults: { prep: 5, work: 40, rest: 20, cycles: 10 },
+      items: [
+        { name: "Sentadilla en pared", note: "Rodillas detrás de la punta de los pies; baja solo hasta donde estés cómodo" },
+        { name: "Zancada atrás alternada", note: "Lenta y controlada; apóyate en una silla si necesitas equilibrio" },
+        { name: "Elevación lateral de pierna", note: "Tumbado de lado. Pierna izquierda en la ronda 1, derecha en la ronda 2", sides: ["izquierda", "derecha"] },
+        { name: "Puente de glúteos", note: "Aprieta los glúteos arriba" },
+        { name: "Elevación de talones lenta", note: "2 s arriba, 2 s abajo" }
+      ],
+      outro: "Al terminar: estiramiento de isquiotibiales 20–30 s por lado. 3–4 veces por semana, con un día de descanso entre sesiones."
+    },
+    hombros: {
+      tab: "Hombros", title: "Hombros sanos", workLabel: "Entrena", prepEach: false, rounds: 2,
+      defaults: { prep: 5, work: 40, rest: 20, cycles: 10 },
+      items: [
+        { name: "Rotación externa con banda", note: "Codo pegado al costado; gira el antebrazo hacia afuera" },
+        { name: "Pájaro invertido o separación con banda", note: "Lleva los omóplatos atrás y júntalos" },
+        { name: "Scaption", note: "Pulgares arriba; sube los brazos a la altura del hombro, unos 30° por delante del costado" },
+        { name: "Deslizamiento en pared", note: "Espalda y brazos contra la pared; desliza los brazos arriba y abajo" },
+        { name: "Rotación interna tumbado de lado", note: "Solo peso ligero" }
+      ],
+      outro: "Sin peso o banda muy ligera, máximo ~2 kg. Para cualquier movimiento que duela. 2–3 veces por semana. Basado en la rutina de manguito rotador de Eric Hörst."
+    },
+    core: {
+      tab: "Core", title: "Core sano", workLabel: "Entrena", prepEach: false, rounds: 2,
+      defaults: { prep: 5, work: 40, rest: 20, cycles: 10 },
+      items: [
+        { name: "Curl-up de McGill", note: "Una rodilla flexionada, manos bajo la zona lumbar; eleva un poco cabeza y hombros, sostén ~10 s por repetición" },
+        { name: "Plancha lateral · izquierda", note: "Rodillas en el suelo si 40 s es mucho, o series de 10 s" },
+        { name: "Plancha lateral · derecha", note: "Rodillas en el suelo si 40 s es mucho, o series de 10 s" },
+        { name: "Bird dog alternado", note: "Sostén cada repetición 1–3 s" },
+        { name: "Dead bug", note: "Zona lumbar pegada al suelo todo el tiempo" }
+      ],
+      outro: "Basado en el «Big 3» de Stuart McGill (curl-up, plancha lateral, bird dog) más el dead bug."
+    }
+  };
+
   const LIMITS = { prep: [0, 30], work: [1, 600], rest: [0, 600], cycles: [1, 60] };
   const INPUTS = { prep: $("setPrep"), work: $("setWork"), rest: $("setRest"), cycles: $("setCycles") };
-  const LABELS = { prep: "Prepárate", work: "Entrena", rest: "Descansa", done: "Terminado" };
+  const LABELS = { prep: "Prepárate", rest: "Descansa", done: "Terminado" };
 
-  let cfg = { ...DEFAULTS };
-  try {
-    const saved = JSON.parse(localStorage.getItem("intervalos.cfg") || "null");
-    if (saved) for (const k of Object.keys(DEFAULTS)) if (Number.isFinite(saved[k])) cfg[k] = clamp(k, saved[k]);
-  } catch (e) {}
+  let progId = "dedos";
+  try { const t = localStorage.getItem("intervalos.tab"); if (PROGRAMS[t]) progId = t; } catch (e) {}
+  let program = PROGRAMS[progId], cfg = loadCfg(progId), seq = [];
 
   let phases = [], totalMs = 0, idx = 0, phaseElapsed = 0, status = "idle";
   let timer = null, lastNow = 0, enteredIdx = -1, lastSec = null, wakeLock = null;
@@ -174,10 +267,69 @@
     return Math.min(hi, Math.max(lo, Math.round(v)));
   }
 
+  function loadCfg(id) {
+    const defaults = PROGRAMS[id].defaults, c = { ...defaults };
+    try {
+      let raw = localStorage.getItem("intervalos.cfg." + id);
+      if (!raw && id === "dedos") raw = localStorage.getItem("intervalos.cfg");
+      const saved = JSON.parse(raw || "null");
+      if (saved) for (const k of Object.keys(defaults)) if (Number.isFinite(saved[k])) c[k] = clamp(k, saved[k]);
+    } catch (e) {}
+    return c;
+  }
+
+  // One entry per cycle: which plan item it is and the label shown while doing it.
+  function buildSeq() {
+    seq = [];
+    if (program.rounds) {
+      for (let r = 0; r < program.rounds; r++)
+        program.items.forEach((it, i) => seq.push({ item: i, label: it.sides ? `${it.name} · ${it.sides[r % it.sides.length]}` : it.name }));
+    } else {
+      program.items.forEach((it, i) => {
+        for (let k = 1; k <= it.reps; k++) seq.push({ item: i, label: it.name, rep: k });
+      });
+    }
+  }
+  const entryFor = c => seq[(c - 1) % seq.length];
+
+  function buildTabs() {
+    tabs.innerHTML = "";
+    for (const [id, p] of Object.entries(PROGRAMS)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "tab";
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-selected", String(id === progId));
+      b.textContent = p.tab;
+      b.addEventListener("click", () => switchTo(id));
+      tabs.appendChild(b);
+    }
+  }
+
+  function buildPlan() {
+    plan.innerHTML = "";
+    for (const it of program.items) {
+      const li = document.createElement("li");
+      const name = document.createElement("span"), count = document.createElement("span"), note = document.createElement("span");
+      name.className = "p-name"; count.className = "p-count"; note.className = "p-note";
+      name.textContent = it.name;
+      note.textContent = it.note;
+      li.append(name, count, note);
+      plan.appendChild(li);
+    }
+    $("outro").textContent = program.outro;
+    $("outro").hidden = !program.outro;
+    $("title").textContent = program.title;
+    $("settingsNote").textContent = (program.prepEach
+      ? "La cuenta regresiva se repite antes de cada serie. "
+      : "La cuenta regresiva es solo al inicio; los últimos 3 s de cada descanso suenan. ") +
+      "Los cambios reinician el temporizador. Solo se pueden editar cuando está detenido.";
+  }
+
   function build() {
     phases = [];
     for (let c = 1; c <= cfg.cycles; c++) {
-      if (cfg.prep > 0) phases.push({ type: "prep", dur: cfg.prep * 1000, cycle: c });
+      if (cfg.prep > 0 && (program.prepEach || c === 1)) phases.push({ type: "prep", dur: cfg.prep * 1000, cycle: c });
       phases.push({ type: "work", dur: cfg.work * 1000, cycle: c });
       if (c < cfg.cycles && cfg.rest > 0) phases.push({ type: "rest", dur: cfg.rest * 1000, cycle: c });
     }
@@ -186,10 +338,10 @@
     strip.innerHTML = "";
     for (let c = 1; c <= cfg.cycles; c++) {
       const li = document.createElement("li");
-      li.title = "Ciclo " + c;
+      li.title = `${c}. ${entryFor(c).label}`;
       strip.appendChild(li);
     }
-    $("summary").textContent = `${cfg.prep} s preparación · ${cfg.work} s trabajo · ${cfg.rest} s descanso · ${cfg.cycles} ciclos`;
+    $("summary").textContent = `${cfg.work} s trabajo · ${cfg.rest} s descanso · ${cfg.cycles} ciclos`;
     for (const k of Object.keys(INPUTS)) INPUTS[k].value = cfg[k];
   }
 
@@ -222,13 +374,13 @@
       o.stop(t + dur + 0.05);
     });
   }
-  const seq = (notes, step, fn) => notes.forEach((f, i) => fn(f, i * step, i === notes.length - 1));
+  const seqNotes = (notes, step, fn) => notes.forEach((f, i) => fn(f, i * step, i === notes.length - 1));
 
   const sounds = {
     pip: () => { ensureAudio(); note(659, 0.35, 0, 0.4); },
-    work: () => { ensureAudio(); seq([523, 659, 784], 0.07, (f, w) => note(f, 0.8, w, 0.35)); },
+    work: () => { ensureAudio(); seqNotes([523, 659, 784], 0.07, (f, w) => note(f, 0.8, w, 0.35)); },
     rest: () => { ensureAudio(); note(659, 0.5, 0, 0.38); note(440, 0.8, 0.18, 0.38); },
-    done: () => { ensureAudio(); seq([523, 659, 784, 1046, 1318], 0.1, (f, w, last) => note(f, last ? 1.2 : 0.5, w, 0.35)); }
+    done: () => { ensureAudio(); seqNotes([523, 659, 784, 1046, 1318], 0.1, (f, w, last) => note(f, last ? 1.2 : 0.5, w, 0.35)); }
   };
 
   async function lockScreen() {
@@ -250,6 +402,14 @@
     return s;
   }
 
+  function renderPlan(e) {
+    [...plan.children].forEach((li, i) => {
+      const it = program.items[i], current = e && e.item === i;
+      li.classList.toggle("now", !!current);
+      li.querySelector(".p-count").textContent = it.reps > 1 ? (current ? `${e.rep} / ${it.reps}` : `×${it.reps}`) : "";
+    });
+  }
+
   function render() {
     app.dataset.status = status;
     settings.disabled = status === "running" || status === "paused";
@@ -263,6 +423,11 @@
       totalLeft.textContent = "0:00";
       [...strip.children].forEach(li => { li.className = "done"; });
       stripCount.textContent = `${cfg.cycles} / ${cfg.cycles}`;
+      nowTag.textContent = "Completado";
+      nowName.textContent = "Rutina completada";
+      nowNote.textContent = program.outro || "Buen trabajo.";
+      roundLabel.textContent = "";
+      renderPlan(null);
       toggleBtn.textContent = "Repetir";
       return;
     }
@@ -278,16 +443,32 @@
         if (p.type === "work") sounds.work();
         if (p.type === "rest") sounds.rest();
       }
-      if (p.type === "prep" && secs !== lastSec) sounds.pip();
+      if (secs !== lastSec) {
+        if (p.type === "prep") sounds.pip();
+        if (p.type === "rest" && !program.prepEach && secs <= 3) sounds.pip();
+      }
       lastSec = secs;
     }
 
     app.dataset.phase = p.type;
-    phaseLabel.textContent = status === "paused" ? "En pausa" : LABELS[p.type];
+    phaseLabel.textContent = status === "paused" ? "En pausa" : p.type === "work" ? program.workLabel : LABELS[p.type];
     digits.textContent = secs;
     cycleLabel.textContent = `Ciclo ${p.cycle} de ${cfg.cycles}`;
     prog.style.strokeDashoffset = CIRC * Math.min(1, phaseElapsed / p.dur);
     totalLeft.textContent = fmt(totalMs - elapsedBefore(idx) - phaseElapsed);
+
+    const upcoming = p.type === "rest" ? p.cycle + 1 : p.cycle;
+    const e = entryFor(upcoming);
+    nowTag.textContent = `${p.type === "work" ? "Ahora" : "Siguiente"} · ${upcoming} de ${cfg.cycles}`;
+    nowName.textContent = e.label;
+    nowNote.textContent = program.items[e.item].note;
+    renderPlan(e);
+    if (program.rounds) {
+      const per = program.items.length;
+      roundLabel.textContent = `Ronda ${Math.floor((upcoming - 1) / per) + 1} de ${Math.ceil(cfg.cycles / per)}`;
+    } else {
+      roundLabel.textContent = `${cfg.cycles} series`;
+    }
 
     const completed = p.type === "rest" ? p.cycle : p.cycle - 1;
     [...strip.children].forEach((li, i) => {
@@ -357,14 +538,27 @@
     else start();
   }
 
+  function switchTo(id) {
+    if (id === progId) return;
+    if ((status === "running" || status === "paused") && !confirm("¿Cambiar de rutina? Se reiniciará el temporizador.")) return;
+    progId = id;
+    try { localStorage.setItem("intervalos.tab", id); } catch (e) {}
+    program = PROGRAMS[id];
+    cfg = loadCfg(id);
+    buildSeq();
+    buildTabs();
+    buildPlan();
+    reset();
+  }
+
   toggleBtn.addEventListener("click", toggle);
   $("reset").addEventListener("click", reset);
 
   for (const k of Object.keys(INPUTS)) {
     INPUTS[k].addEventListener("change", () => {
       const v = Number(INPUTS[k].value);
-      cfg[k] = Number.isFinite(v) ? clamp(k, v) : DEFAULTS[k];
-      try { localStorage.setItem("intervalos.cfg", JSON.stringify(cfg)); } catch (e) {}
+      cfg[k] = Number.isFinite(v) ? clamp(k, v) : program.defaults[k];
+      try { localStorage.setItem("intervalos.cfg." + progId, JSON.stringify(cfg)); } catch (e) {}
       reset();
     });
   }
@@ -382,6 +576,9 @@
     if (document.visibilityState === "visible" && status === "running") lockScreen();
   });
 
+  buildSeq();
+  buildTabs();
+  buildPlan();
   reset();
 })();
 </script>
